@@ -39,14 +39,13 @@ Gitlab::Application.routes.draw do
   resources :projects, :constraints => { :id => /[^\/]+/ }, :only => [:new, :create, :index]
   resources :keys
 
-  devise_for :users
+  devise_for :users, :controllers => { :omniauth_callbacks => :omniauth_callbacks }
 
   resources :projects, :constraints => { :id => /[^\/]+/ }, :except => [:new, :create, :index], :path => "/" do
     member do
       get "team"
       get "wall"
       get "graph"
-      get "info"
       get "files"
     end
 
@@ -54,6 +53,7 @@ Gitlab::Application.routes.draw do
       member do 
         get "branches"
         get "tags"
+        get "archive"
       end
     end
 
@@ -96,7 +96,11 @@ Gitlab::Application.routes.draw do
         get :test
       end
     end
-    resources :commits
+    resources :commits do 
+      collection do 
+        get :compare
+      end
+    end
     resources :team_members
     resources :issues do
       collection do
@@ -106,5 +110,5 @@ Gitlab::Application.routes.draw do
     end
     resources :notes, :only => [:create, :destroy]
   end
-  root :to => "dashboard#index"
+  root :to => "projects#index"
 end

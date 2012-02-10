@@ -1,6 +1,7 @@
 class MergeRequestsController < ApplicationController
   before_filter :authenticate_user!
   before_filter :project
+  before_filter :module_enabled
   before_filter :merge_request, :only => [:edit, :update, :destroy, :show, :commits, :diffs]
   layout "project"
 
@@ -38,6 +39,8 @@ class MergeRequestsController < ApplicationController
 
     @notes = @merge_request.notes.inc_author.order("created_at DESC").limit(20)
     @note = @project.notes.new(:noteable => @merge_request)
+
+    render_full_content
 
     respond_to do |format|
       format.html
@@ -111,5 +114,9 @@ class MergeRequestsController < ApplicationController
 
   def authorize_admin_merge_request!
     can?(current_user, :admin_merge_request, @merge_request)
+  end
+
+  def module_enabled
+    return render_404 unless @project.merge_requests_enabled
   end
 end
