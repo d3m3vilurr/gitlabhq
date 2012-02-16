@@ -4,10 +4,9 @@
   %body.application
     = render "layouts/flash"
     = render "layouts/head_panel", :title => "Dashboard"
-    .container-fluid
-      .sidebar
-        = render :partial => "layouts/app_side"
+    .container
+      = render :partial => "layouts/app_menu"
       .content
         .row
-          .span10= yield
-          .span4= render "layouts/projects_side"
+          .span12= yield
+          .sidebar= render "layouts/projects_side"

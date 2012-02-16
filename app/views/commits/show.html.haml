@@ -6,6 +6,11 @@
   %h5
     = @commit.author_name
     %small= @commit.created_at.stamp("Aug 21, 2011 9:23pm")
+    - if @commit.author_name != @commit.committer_name or @commit.author_email != @commit.committer_email or @commit.authored_date != @commit.committed_date 
+      &ndash;
+      %cite committed by
+      = @commit.committer_name
+      %small= @commit.committed_date.stamp("Aug 21, 2011 9:23pm")
 
 %hr
 %pre.commit_message
@@ -13,6 +18,8 @@
 .clear
 %br
 
+%p.cgray
+  Showing #{pluralize(@commit.diffs.count, "changed file")}
 = render "commits/diffs", :diffs => @commit.diffs
 = render "notes/notes"
 = render "notes/per_line_form"
@@ -20,10 +27,11 @@
 
 :javascript
   $(document).ready(function(){
-    $(".noteable_line").live("dblclick", function(e) { 
+    $(".line_note_link").live("click", function(e) { 
       var form = $(".per_line_form");
-      $(this).parent().after(form);
+      $(this).parent().parent().after(form);
       form.find("#note_line_code").val($(this).attr("line_code"));
       form.show();  
+      return false;
     });
   });

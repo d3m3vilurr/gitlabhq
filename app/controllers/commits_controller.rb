@@ -13,7 +13,7 @@ class CommitsController < ApplicationController
 
   def index
     @repo = project.repo
-    @limit, @offset = (params[:limit] || 20), (params[:offset] || 0)
+    @limit, @offset = (params[:limit] || 40), (params[:offset] || 0)
     @commits = @project.commits(@ref, params[:path], @limit, @offset)
 
     respond_to do |format|
@@ -28,6 +28,7 @@ class CommitsController < ApplicationController
     @notes = project.commit_notes(@commit).fresh.limit(20)
     @note = @project.build_commit_note(@commit)
 
+    @comments_allowed = true
     @line_notes = project.commit_line_notes(@commit)
 
     respond_to do |format|

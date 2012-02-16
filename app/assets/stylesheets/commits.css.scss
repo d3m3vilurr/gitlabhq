@@ -75,10 +75,14 @@
     padding:0px;
     border:none;
     &.new { 
-      background: #DFD;
+      background: #CFD;
     }
     &.old { 
       background: #FDD;
+    }
+    &.matched { 
+      color:#ccc;
+      background:#fafafa;
     }
   }
 }
@@ -140,4 +144,17 @@ ul.bordered-list li:last-child { border:none }
   top: 0;
   left: 0;
   margin-right: 10px;
+}
+
+li.commit { 
+  .avatar { 
+    width:24px;
+    top:-3px;
+    margin-right:10px;
+    margin-left:10px;
+  }
+
+  code { 
+    padding:4px;
+  }
 }

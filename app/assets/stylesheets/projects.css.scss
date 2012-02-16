@@ -201,3 +201,18 @@ input.git_clone_url {
     width:60px;
   }
 }
+
+.merge-request-form-holder {
+  select { 
+    width:300px;
+  }
+}
+
+/** Issues **/
+#issue_assignee_id {
+  width:300px;
+}
+
+#new_issue_dialog textarea{
+    height: 100px;
+}
