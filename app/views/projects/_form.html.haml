@@ -27,7 +27,7 @@
       = f.label :default_branch, "Default Branch"
       .input= f.select(:default_branch, @project.heads.map(&:name), {}, :style => "width:210px;")
 
-    .well
+    .alert-message.block-message.warning
       %h5 Features
 
       .clearfix
@@ -41,6 +41,10 @@
       .clearfix
         = f.label :wall_enabled, "Wall"
         .input= f.check_box :wall_enabled
+      
+      .clearfix
+        = f.label :wiki_enabled, "Wiki"
+        .input= f.check_box :wiki_enabled
     
   .clearfix
     = f.label :description

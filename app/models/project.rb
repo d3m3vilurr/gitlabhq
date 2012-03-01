@@ -3,6 +3,7 @@ require "grit"
 class Project < ActiveRecord::Base
   belongs_to :owner, :class_name => "User"
 
+  has_many :events, :dependent => :destroy
   has_many :merge_requests, :dependent => :destroy
   has_many :issues, :dependent => :destroy, :order => "position"
   has_many :users_projects, :dependent => :destroy
@@ -12,6 +13,7 @@ class Project < ActiveRecord::Base
   has_many :deploy_keys, :dependent => :destroy, :foreign_key => "project_id", :class_name => "Key"
   has_many :web_hooks, :dependent => :destroy
   has_many :protected_branches, :dependent => :destroy
+  has_many :wikis, :dependent => :destroy
 
   acts_as_taggable
 
@@ -88,21 +90,35 @@ class Project < ActiveRecord::Base
     [GIT_HOST['host'], code].join("/")
   end
 
-  def execute_web_hooks(oldrev, newrev, ref)
+  def observe_push(oldrev, newrev, ref, author_key_id)
+    data = web_hook_data(oldrev, newrev, ref, author_key_id)
+
+    Event.create(
+      :project => self,
+      :action => Event::Pushed,
+      :data => data
+    )
+  end
+
+  def execute_web_hooks(oldrev, newrev, ref, author_key_id)
     ref_parts = ref.split('/')
 
     # Return if this is not a push to a branch (e.g. new commits)
     return if ref_parts[1] !~ /heads/ || oldrev == "00000000000000000000000000000000"
 
-    data = web_hook_data(oldrev, newrev, ref)
+    data = web_hook_data(oldrev, newrev, ref, author_key_id)
+
     web_hooks.each { |web_hook| web_hook.execute(data) }
   end
 
-  def web_hook_data(oldrev, newrev, ref)
+  def web_hook_data(oldrev, newrev, ref, author_key_id)
+    key = Key.find_by_identifier(author_key_id)
     data = {
       before: oldrev,
       after: newrev,
       ref: ref,
+      user_id: key.user.id,
+      user_name: key.user_name,
       repository: {
         name: name,
         url: web_url,
@@ -187,7 +203,7 @@ class Project < ActiveRecord::Base
              elsif access.include?(:write)
                { :project_access => UsersProject::DEVELOPER } 
              else
-               { :project_access => UsersProject::GUEST } 
+               { :project_access => UsersProject::REPORTER } 
              end
     opts = { :user => user }
     opts.merge!(access)
@@ -232,16 +248,20 @@ class Project < ActiveRecord::Base
     !users_projects.where(:user_id => user.id).empty?
   end
 
-  def allow_write_for?(user)
+  def guest_access_for?(user)
     !users_projects.where(:user_id => user.id).empty?
   end
 
-  def allow_admin_for?(user)
-    !users_projects.where(:user_id => user.id, :project_access => [UsersProject::MASTER]).empty? || owner_id == user.id
+  def report_access_for?(user)
+    !users_projects.where(:user_id => user.id, :project_access => [UsersProject::REPORTER, UsersProject::DEVELOPER, UsersProject::MASTER]).empty?
   end
 
-  def allow_pull_for?(user)
-    !users_projects.where(:user_id => user.id, :project_access => [UsersProject::REPORTER, UsersProject::DEVELOPER, UsersProject::MASTER]).empty?
+  def dev_access_for?(user)
+    !users_projects.where(:user_id => user.id, :project_access => [UsersProject::DEVELOPER, UsersProject::MASTER]).empty?
+  end
+
+  def master_access_for?(user)
+    !users_projects.where(:user_id => user.id, :project_access => [UsersProject::MASTER]).empty? || owner_id == user.id
   end
 
   def root_ref 
@@ -359,5 +379,6 @@ end
 #  issues_enabled         :boolean         default(TRUE), not null
 #  wall_enabled           :boolean         default(TRUE), not null
 #  merge_requests_enabled :boolean         default(TRUE), not null
+#  wiki_enabled           :boolean         default(TRUE), not null
 #
 

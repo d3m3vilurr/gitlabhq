@@ -24,12 +24,13 @@ gem "acts_as_list"
 gem "rdiscount"
 gem "acts-as-taggable-on", "~> 2.1.0"
 gem "drapper"
-gem "resque"
+gem "resque", "~> 1.20.0"
 gem "httparty"
 gem "charlock_holmes"
 gem "foreman"
 gem "omniauth-ldap"
 gem 'bootstrap-sass', "1.4.4"
+gem "colored"
 
 group :assets do
   gem "sass-rails",   "3.2.3"
@@ -58,5 +59,5 @@ end
 group :test do
   gem "turn", :require => false
   gem "simplecov", :require => false
-  gem "shoulda", "~> 3.0.0.beta2"
+  gem "shoulda", "3.0.0"
 end

@@ -1,7 +1,12 @@
 = render "project_head"
 %h3
   = @project.name
-%hr
+  - if can? current_user, :download_code, @project
+    = link_to "Download", archive_project_repository_path(@project), :class => "btn small right"
+.back_link
+  = link_to projects_path do 
+    &larr; To projects list
+%br
 .alert-message.block-message.warning
   .input
     .input-prepend
@@ -9,8 +14,9 @@
       = text_field_tag :project_clone, @project.url_to_repo, :class => "xlarge one_click_select git_clone_url"
 
 = simple_format @project.description
-
-%h5.cgray Recent Activity
-.content_list= render "feed"
+- unless @activities.blank?
+  .ui-box
+    %h5.cgray Recent Activity
+    .content_list= render "feed"
 
 

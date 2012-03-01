@@ -45,7 +45,7 @@ class Commit
   end
 
   def author_name
-    author.name
+    author.name.force_encoding("UTF-8")
   end
 
   def committer_name
@@ -58,5 +58,9 @@ class Commit
 
   def prev_commit
     parents.first
+  end
+
+  def prev_commit_id
+    prev_commit.id
   end
 end
