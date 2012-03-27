@@ -1,5 +1,5 @@
 - if current_user.require_ssh_key?
-  .alert-message.warning
+  .alert-message.block-message.error
     %p  
       You wont be able to pull/push project code unless you  
       = link_to new_key_path, :class => "vlink" do 
@@ -8,9 +8,10 @@
 
 %div.dashboard_category
   %h3
-    Projects
+    %span.ico.projects
+    = link_to "Projects" , "#projects", :id => "projects"
     %small
-      ( most recent )
+      (most recent)
 
   %strong.right
     = link_to projects_path do 
@@ -19,47 +20,67 @@
   .row
     .dashboard_block
       .row
-        .span9= render "dashboard/projects_feed"
-        .span3.right
-          - if current_user.can_create_project?
-            .alert-message.block-message.warning
-              You can create up to
-              = current_user.projects_limit
-              projects. Click on link below to add a new one
-              .link_holder
-                = link_to new_project_path, :class => "" do 
-                  New Project » 
+        .span4.right
+          %div.borders.ipadded
+            %h1
+              = pluralize current_user.projects.count, "project", "projects"
+            - if current_user.can_create_project?
+              %hr
+              %div
+                You can create up to
+                = current_user.projects_limit
+                projects. Click on button below to add a new one
+                .link_holder
+                  %br
+                  = link_to new_project_path, :class => "btn" do 
+                    New Project » 
+            - else 
+              %hr
+              %div
+                You've reached project limit for your account. 
+                You cannot create new projects.
+                .link_holder
+                  %br
+                  = link_to profile_path, :class => "btn" do 
+                    Your Profile » 
+        .span10.left= render "dashboard/projects_feed", :projects => @active_projects
+      - if @last_push
+        .padded.prepend-top-20
+          %h5
+            %small Latest push was to the #{@last_push.branch_name} branch of #{@last_push.project.name}:
+          %ul.unstyled= render @last_push
 
-
-- unless @merge_requests.blank?
+- if @merge_requests.any?
   %div.dashboard_category
     %h3
-      Merge Requests
-      %small ( authored or assigned to you )
+      = link_to "Merge Requests" , "#merge_requests", :id => "merge_requests"
+      
+      %small (authored or assigned to you)
     %strong.right
       = link_to dashboard_merge_requests_path do 
-        Vist merge requests page &rarr; 
+        Visit merge requests page &rarr; 
     %hr
     .row
       .dashboard_block= render "dashboard/merge_requests_feed"
 
-- unless @issues.blank?
+- if @issues.any?
   %div.dashboard_category
     %h3
-      Issues
-      %small ( assigned to you )
+      = link_to "Issues" , "#issues", :id => "issues"
+      %small (assigned to you)
     %strong.right
-      = link_to dashboard_merge_requests_path do 
-        Vist issues page &rarr; 
+      = link_to dashboard_issues_path do 
+        Visit issues page &rarr; 
     %hr
     .row
       .dashboard_block= render "dashboard/issues_feed"
 
-- unless @events.blank?
+- if @events.any?
   %div.dashboard_category
     %h3
-      Activities
+      %span.ico.activities
+      = link_to "Activities" , "#activities", :id => "activities"
 
     %hr
     .row
-      .dashboard_block= render "dashboard/events_feed"
+      .dashboard_block= render @events

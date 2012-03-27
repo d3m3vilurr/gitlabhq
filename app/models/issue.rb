@@ -5,6 +5,7 @@ class Issue < ActiveRecord::Base
   has_many :notes, :as => :noteable, :dependent => :destroy
 
   attr_protected :author, :author_id, :project, :project_id
+  attr_accessor :author_id_of_changes
 
   validates_presence_of :project_id
   validates_presence_of :assignee_id
@@ -23,6 +24,9 @@ class Issue < ActiveRecord::Base
   validates :title,
             :presence => true,
             :length   => { :within => 0..255 }
+            
+  validates :description,
+            :length   => { :within => 0..2000 }
 
   scope :critical, where(:critical => true)
   scope :non_critical, where(:critical => false)
@@ -44,6 +48,11 @@ class Issue < ActiveRecord::Base
   def new?
     today? && created_at == updated_at
   end
+
+  # Return the number of +1 comments (upvotes)
+  def upvotes
+    notes.select(&:upvote?).size
+  end
 end
 # == Schema Information
 #
@@ -51,6 +60,7 @@ end
 #
 #  id          :integer         not null, primary key
 #  title       :string(255)
+#  description :text
 #  assignee_id :integer
 #  author_id   :integer
 #  project_id  :integer

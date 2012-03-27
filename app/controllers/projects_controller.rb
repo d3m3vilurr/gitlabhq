@@ -11,8 +11,9 @@ class ProjectsController < ApplicationController
   before_filter :require_non_empty_project, :only => [:blob, :tree, :graph]
 
   def index
-    @limit, @offset = (params[:limit] || 16), (params[:offset] || 0)
-    @projects = current_user.projects.limit(@limit).offset(@offset)
+    @projects = current_user.projects
+    @projects = @projects.select(&:last_activity_date).sort_by(&:last_activity_date).reverse
+    @events = Event.where(:project_id => @projects.map(&:id)).recent.limit(40)
   end
 
   def new
@@ -67,9 +68,18 @@ class ProjectsController < ApplicationController
   end
 
   def show
-    return render "projects/empty" unless @project.repo_exists? && @project.has_commits?
-    limit = (params[:limit] || 10).to_i
-    @activities = @project.activities(limit)
+    limit = (params[:limit] || 20).to_i
+    @events = @project.events.recent.limit(limit)
+
+    respond_to do |format|
+      format.html do 
+         if @project.repo_exists? && @project.has_commits?
+           render :show
+         else
+           render "projects/empty"
+         end
+      end
+    end
   end
 
   def files

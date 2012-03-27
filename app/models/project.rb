@@ -3,19 +3,17 @@ require "grit"
 class Project < ActiveRecord::Base
   belongs_to :owner, :class_name => "User"
 
-  has_many :events, :dependent => :destroy
+  has_many :users,          :through => :users_projects
+  has_many :events,         :dependent => :destroy
   has_many :merge_requests, :dependent => :destroy
-  has_many :issues, :dependent => :destroy, :order => "position"
+  has_many :issues,         :dependent => :destroy, :order => "position"
   has_many :users_projects, :dependent => :destroy
-  has_many :users, :through => :users_projects
-  has_many :notes, :dependent => :destroy
-  has_many :snippets, :dependent => :destroy
-  has_many :deploy_keys, :dependent => :destroy, :foreign_key => "project_id", :class_name => "Key"
-  has_many :web_hooks, :dependent => :destroy
+  has_many :notes,          :dependent => :destroy
+  has_many :snippets,       :dependent => :destroy
+  has_many :deploy_keys,    :dependent => :destroy, :foreign_key => "project_id", :class_name => "Key"
+  has_many :web_hooks,      :dependent => :destroy
+  has_many :wikis,          :dependent => :destroy
   has_many :protected_branches, :dependent => :destroy
-  has_many :wikis, :dependent => :destroy
-
-  acts_as_taggable
 
   validates :name,
             :uniqueness => true,
@@ -39,14 +37,9 @@ class Project < ActiveRecord::Base
                          :message => "only letters, digits & '_' '-' '.' allowed"  },
             :length   => { :within => 3..255 }
 
-  validates :owner,
-            :presence => true
-
+  validates :owner, :presence => true
   validate :check_limit
   validate :repo_name
-
-  after_destroy :destroy_repository
-  after_save :update_repository
 
   attr_protected :private_flag, :owner_id
 
@@ -61,26 +54,9 @@ class Project < ActiveRecord::Base
     UsersProject.access_roles
   end
 
-  def repository
-    @repository ||= Repository.new(self)
+  def self.search query
+    where("name like :query or code like :query or path like :query", :query => "%#{query}%")
   end
-
-  delegate :repo,
-    :url_to_repo,
-    :path_to_repo,
-    :update_repository,
-    :destroy_repository,
-    :tags,
-    :repo_exists?,
-    :commit,
-    :commits,
-    :commits_with_refs,
-    :tree,
-    :heads,
-    :commits_since,
-    :fresh_commits,
-    :commits_between,
-    :to => :repository, :prefix => nil
 
   def to_param
     code
@@ -96,8 +72,27 @@ class Project < ActiveRecord::Base
     Event.create(
       :project => self,
       :action => Event::Pushed,
-      :data => data
+      :data => data,
+      :author_id => data[:user_id]
     )
+  end
+
+  def update_merge_requests(oldrev, newrev, ref, author_key_id)
+    return true unless ref =~ /heads/
+    branch_name = ref.gsub("refs/heads/", "")
+    user = Key.find_by_identifier(author_key_id).user
+    c_ids = self.commits_between(oldrev, newrev).map(&:id)
+
+    # Update code for merge requests
+    mrs = self.merge_requests.opened.find_all_by_branch(branch_name).all
+    mrs.each { |merge_request| merge_request.reload_code }
+
+    # Close merge requests
+    mrs = self.merge_requests.opened.where(:target_branch => branch_name).all
+    mrs = mrs.select(&:last_commit).select { |mr| c_ids.include?(mr.last_commit.id) } 
+    mrs.each { |merge_request| merge_request.merge!(user.id) }
+
+    true
   end
 
   def execute_web_hooks(oldrev, newrev, ref, author_key_id)
@@ -163,18 +158,6 @@ class Project < ActiveRecord::Base
     users_projects.find_by_user_id(user_id)
   end
 
-  def fresh_merge_requests(n)
-    merge_requests.includes(:project, :author).order("created_at desc").first(n)
-  end
-
-  def fresh_issues(n)
-    issues.includes(:project, :author).order("created_at desc").first(n)
-  end
-
-  def fresh_notes(n)
-    notes.inc_author_project.order("created_at desc").first(n)
-  end
-
   def common_notes
     notes.where(:noteable_type => ["", nil]).inc_author_project
   end
@@ -232,18 +215,6 @@ class Project < ActiveRecord::Base
     keys.map(&:identifier)
   end
 
-  def readers
-    @readers ||= users_projects.includes(:user).map(&:user)
-  end
-
-  def writers
-    @writers ||= users_projects.includes(:user).map(&:user)
-  end
-
-  def admins
-    @admins ||= users_projects.includes(:user).where(:project_access => UsersProject::MASTER).map(&:user)
-  end
-
   def allow_read_for?(user)
     !users_projects.where(:user_id => user.id).empty?
   end
@@ -277,68 +248,15 @@ class Project < ActiveRecord::Base
   end
 
   def last_activity
-    updates(1).first
-  rescue
-    nil
+    events.last || nil
   end
 
   def last_activity_date
-    last_activity.try(:created_at)
-  end
-
-  def last_activity_date_cached(expire = 1.hour)
-    activity_date_key = "project_#{id}_activity_date"
-
-    cached_activities = Rails.cache.read(activity_date_key)
-    if cached_activities
-      activity_date = if cached_activities == "Never"
-                        nil
-                      else
-                        cached_activities
-                      end
+    if events.last
+      events.last.created_at
     else
-      activity_date = last_activity_date
-      Rails.cache.write(activity_date_key, activity_date || "Never", :expires_in => expire)
+      updated_at
     end
-
-    activity_date
-  end
-
-  # Get project updates from cache
-  # or calculate. 
-  def cached_updates(limit, expire = 2.minutes)
-    activities_key = "project_#{id}_activities"
-    cached_activities = Rails.cache.read(activities_key)
-    if cached_activities
-      activities = cached_activities
-    else
-      activities = updates(limit)
-      Rails.cache.write(activities_key, activities, :expires_in => expire)
-    end
-
-    activities
-  end
-
-  # Get 20 events for project like
-  # commits, issues or notes
-  def updates(n = 3)
-    [
-      fresh_commits(n),
-      fresh_issues(n),
-      fresh_notes(n)
-    ].compact.flatten.sort do |x, y|
-      y.created_at <=> x.created_at
-    end[0...n]
-  end
-
-  def activities(n=3)
-    [
-      fresh_issues(n),
-      fresh_merge_requests(n),
-      notes.inc_author_project.where("noteable_type is not null").order("created_at desc").first(n)
-    ].compact.flatten.sort do |x, y|
-      y.created_at <=> x.created_at
-    end[0...n]
   end
 
   def check_limit
@@ -361,7 +279,94 @@ class Project < ActiveRecord::Base
     errors.add(:path, "Invalid repository path")
     false
   end
+
+  def commit(commit_id = nil)
+    Commit.find_or_first(repo, commit_id)
+  end
+
+  def fresh_commits(n = 10)
+    Commit.fresh_commits(repo, n)
+  end
+
+  def commits_with_refs(n = 20)
+    Commit.commits_with_refs(repo, n)
+  end
+
+  def commits_since(date)
+    Commit.commits_since(repo, date)
+  end
+
+  def commits(ref, path = nil, limit = nil, offset = nil)
+    Commit.commits(repo, ref, path, limit, offset)
+  end
+
+  def commits_between(from, to)
+    Commit.commits_between(repo, from, to)
+  end
+
+  def project_id
+    self.id
+  end
+
+  def write_hooks
+    %w(post-receive).each do |hook|
+      write_hook(hook, File.read(File.join(Rails.root, 'lib', "#{hook}-hook")))
+    end
+  end
+
+  def write_hook(name, content)
+    hook_file = File.join(path_to_repo, 'hooks', name)
+
+    File.open(hook_file, 'w') do |f|
+      f.write(content)
+    end
+
+    File.chmod(0775, hook_file)
+  end
+
+  def repo
+    @repo ||= Grit::Repo.new(path_to_repo)
+  end
+
+  def url_to_repo
+    Gitlabhq::GitHost.url_to_repo(path)
+  end
+
+  def path_to_repo
+    File.join(GIT_HOST["base_path"], "#{path}.git")
+  end
+
+  def update_repository
+    Gitlabhq::GitHost.system.update_project(path, self)
+
+    write_hooks if File.exists?(path_to_repo)
+  end
+
+  def destroy_repository
+    Gitlabhq::GitHost.system.destroy_project(self)
+  end
+
+  def repo_exists?
+    @repo_exists ||= (repo && !repo.branches.empty?)
+  rescue 
+    @repo_exists = false
+  end
+
+  def tags
+    repo.tags.map(&:name).sort.reverse
+  end
+
+  def heads
+    @heads ||= repo.heads
+  end
+
+  def tree(fcommit, path = nil)
+    fcommit = commit if fcommit == :head
+    tree = fcommit.tree
+    path ? (tree / path) : tree
+  end
 end
+
 # == Schema Information
 #
 # Table name: projects

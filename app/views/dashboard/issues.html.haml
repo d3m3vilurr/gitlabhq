@@ -1,6 +1,7 @@
 %h3
   Issues
-  %small ( assigned to you )
+  %small (assigned to you)
 
 %br
-.ui-box= render "dashboard/issues_feed"
+- if @issues.any?
+  .ui-box= render "dashboard/issues_feed"

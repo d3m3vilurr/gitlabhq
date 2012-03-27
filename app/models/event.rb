@@ -1,10 +1,13 @@
 class Event < ActiveRecord::Base
+  default_scope where("author_id IS NOT NULL")
+
   Created   = 1
   Updated   = 2
   Closed    = 3
   Reopened  = 4
   Pushed    = 5
   Commented = 6
+  Merged    = 7
 
   belongs_to :project
   belongs_to :target, :polymorphic => true
@@ -12,6 +15,7 @@ class Event < ActiveRecord::Base
   serialize :data
 
   scope :recent, order("created_at DESC")
+  scope :code_push, where(:action => Pushed)
 
   def self.determine_action(record)
     if [Issue, MergeRequest].include? record.class
@@ -21,8 +25,29 @@ class Event < ActiveRecord::Base
     end
   end
 
+  # Next events currently enabled for system
+  #  - push 
+  #  - new issue
+  #  - merge request
+  def allowed?
+    push? || new_issue? || new_merge_request? || 
+      changed_merge_request? || changed_issue?
+  end
+
   def push?
     action == self.class::Pushed
+  end
+
+  def closed?
+    action == self.class::Closed
+  end
+
+  def reopened?
+    action == self.class::Reopened
+  end
+
+  def new_tag? 
+    data[:ref]["refs/tags"]
   end
 
   def new_branch?
@@ -41,8 +66,40 @@ class Event < ActiveRecord::Base
     @branch_name ||= data[:ref].gsub("refs/heads/", "")
   end
 
-  def pusher
-    User.find_by_id(data[:user_id])
+  def tag_name
+    @tag_name ||= data[:ref].gsub("refs/tags/", "")
+  end
+
+  def new_issue? 
+    target_type == "Issue" && 
+      action == Created
+  end
+
+  def new_merge_request? 
+    target_type == "MergeRequest" && 
+      action == Created
+  end
+
+  def changed_merge_request? 
+    target_type == "MergeRequest" && 
+      [Closed, Reopened].include?(action)
+  end
+
+  def changed_issue? 
+    target_type == "Issue" && 
+      [Closed, Reopened].include?(action)
+  end
+
+  def issue 
+    target if target_type == "Issue"
+  end
+
+  def merge_request
+    target if target_type == "MergeRequest"
+  end
+
+  def author 
+    @author ||= User.find(author_id)
   end
   
   def commits
@@ -51,7 +108,9 @@ class Event < ActiveRecord::Base
     end
   end
 
-  delegate :id, :name, :email, :to => :pusher, :prefix => true, :allow_nil => true
+  delegate :name, :email, :to => :author, :prefix => true, :allow_nil => true
+  delegate :title, :to => :issue, :prefix => true, :allow_nil => true
+  delegate :title, :to => :merge_request, :prefix => true, :allow_nil => true
 end
 # == Schema Information
 #
