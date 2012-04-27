@@ -1,7 +1,8 @@
-require "iconv"
+	require "iconv"
 
 class Commit
   include ActiveModel::Conversion
+  include Gitlabhq::Encode
   extend ActiveModel::Naming
 
   attr_accessor :commit
@@ -92,8 +93,7 @@ class Commit
   end
 
   def safe_message
-    iconv = Iconv.new("UTF-8//IGNORE", "UTF-8")
-    iconv.iconv(message + ' ')[0..-2]
+    utf8 message
   end
 
   def created_at
@@ -105,11 +105,16 @@ class Commit
   end
 
   def author_name
-    author.name.force_encoding("UTF-8")
+    utf8 author.name
+  end
+
+  # Was this commit committed by a different person than the original author?
+  def different_committer?
+    author_name != committer_name || author_email != committer_email
   end
 
   def committer_name
-    committer.name
+    utf8 committer.name
   end
 
   def committer_email
@@ -117,10 +122,10 @@ class Commit
   end
 
   def prev_commit
-    parents.first
+    parents.try :first
   end
 
   def prev_commit_id
-    prev_commit.id
+    prev_commit.try :id
   end
 end

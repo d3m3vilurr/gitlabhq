@@ -1,3 +1,19 @@
+v 2.4.0
+  - Admin area stats page
+  - Ability to block user
+  - Simplified dashboard area
+  - Improved admin area
+  - Bootstrap 2.0
+  - Responsive layout
+  - Big commits handling
+  - Perfomance improved
+  - Milestones
+
+v 2.3.1
+  - Issues pagination
+  - ssl fixes
+  - Merge Request pagination
+
 v 2.3.0
   - Dashboard r1
   - Search r1
