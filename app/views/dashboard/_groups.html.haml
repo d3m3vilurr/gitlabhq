@@ -1,0 +1,18 @@
+.ui-box
+  %h5.title
+    Groups
+    %small
+      (#{groups.count})
+    - if current_user.can_create_group?
+      %span.pull-right
+        = link_to new_group_path, class: "btn btn-tiny info" do
+          %i.icon-plus
+          New Group
+  %ul.well-list
+    - groups.each do |group|
+      %li
+        = link_to group_path(id: group.path), class: dom_class(group) do
+          %strong.well-title= truncate(group.name, length: 35)
+        %span.pull-right.light
+          - if group.owner == current_user
+            %i.icon-wrench

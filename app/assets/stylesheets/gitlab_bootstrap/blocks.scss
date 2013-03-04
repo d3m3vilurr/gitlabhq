@@ -1,0 +1,151 @@
+/**
+ * ===================================
+ * Contain UI block elements:
+ *   .ui-box   - for any block & widgets
+ * ===================================
+ */
+
+/**
+ * UI Block
+ *
+ */
+.ui-box {
+  background: #F9F9F9;
+  margin-bottom: 25px;
+  border: 1px solid #CCC;
+  @include solid-shade;
+
+  &.ui-box-show {
+    margin:20px 0;
+    background: #FFF;
+  }
+
+  img { max-width: 100%; }
+
+  pre {
+    code {
+      background: none !important;
+    }
+  }
+
+  .ui-box-head,
+  .ui-box-body,
+  .ui-box-bottom {
+    padding: 15px;
+    word-wrap: break-word;
+
+    pre {
+      background: none !important;
+      margin: 0;
+      border: none;
+      padding: 0;
+    }
+
+    .clearfix {
+      margin: 0;
+    }
+  }
+
+  .ui-box-head {
+    .box-title {
+      color: $style_color;
+      font-size: 18px;
+      font-weight: normal;
+      line-height: 28px;
+    }
+    h3 {
+      margin: 0;
+    }
+  }
+
+  .ui-box-body {
+    border: none;
+    font-size: 12px;
+    background-color: #f5f5f5;
+    border: none;
+    border-top: 1px solid #eee;
+  }
+
+  .ui-box-bottom {
+    border-top: 1px solid #eee;
+  }
+
+  &.white {
+    background: #fff;
+  }
+
+  ul {
+    margin: 0;
+  }
+
+  .title {
+    @include bg-gray-gradient;
+    border-bottom: 1px solid #CCC;
+    color: #456;
+    font-size: 16px;
+    text-shadow: 0 1px 1px #fff;
+    padding: 0px 10px;
+    line-height: 36px;
+    font-size: 14px;
+    font-weight: normal;
+
+    > a {
+      text-shadow: 0 1px 1px #fff;
+    }
+
+    form {
+      margin-bottom: 0;
+      margin-top: 0;
+    }
+
+    .btn-tiny {
+      @include box-shadow(0 0px 0px 1px #f1f1f1);
+    }
+
+    .nav-pills {
+      > li {
+        > a {
+          padding: 13px;
+          margin: 0;
+          font-size: 13px;
+        }
+        &.active {
+          > a {
+            background: #D5D5D5;
+            color: $style_color;
+            @include border-radius(0);
+            border-radius: 0;
+            border-left: 1px solid #CCC;
+            border-right: 1px solid #CCC;
+          }
+        }
+      }
+    }
+  }
+
+  &.padded {
+    h5, .title {
+      margin: -20px;
+      margin-bottom: 0;
+      padding: 5px 20px;
+    }
+    .middle_title {
+      background: #f5f5f5;
+      margin:20px -20px;
+      padding: 0 20px;
+      border-top: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+      color: #777;
+    }
+  }
+
+  .row_title {
+    font-weight: bold;
+    color: #444;
+    &:hover {
+      color: #444;
+      text-decoration: underline;
+    }
+  }
+}

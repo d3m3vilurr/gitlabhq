@@ -1,68 +1,176 @@
 source "http://rubygems.org"
 
-gem "rails", "3.2.3"
+def darwin_only(require_as)
+  RUBY_PLATFORM.include?('darwin') && require_as
+end
 
-gem "sqlite3"
-gem "mysql2"
-gem "rake"
+def linux_only(require_as)
+  RUBY_PLATFORM.include?('linux') && require_as
+end
+
+gem "rails", "3.2.12"
+
+# Supported DBs
+gem "mysql2", group: :mysql
+gem "pg", group: :postgres
+
+# Auth
 gem "devise"
+gem 'omniauth', "~> 1.1.3"
+gem 'omniauth-google-oauth2'
+gem 'omniauth-twitter'
+gem 'omniauth-github'
+
+# Extracting information from a git repository
+gem "gitlab-grit", '~> 1.0.0', require: 'grit'
+gem 'grit_ext', '~> 0.6.2'
+
+# Ruby/Rack Git Smart-HTTP Server Handler
+gem 'gitlab-grack', '~> 1.0.0', require: 'grack'
+
+# LDAP Auth
+gem 'gitlab_omniauth-ldap', '1.0.2', require: "omniauth-ldap"
+
+# Dump db to yml file. Mostly used to migrate from sqlite to mysql
+gem 'gitlab_yaml_db', '1.0.0', require: "yaml_db"
+
+# Syntax highlighter
+gem "gitlab-pygments.rb", '~> 0.3.2', require: 'pygments.rb'
+
+# Language detection
+gem "github-linguist", "~> 2.3.4" , require: "linguist"
+
+# API
+gem "grape", "~> 0.3.1"
+gem "grape-entity", "~> 0.2.0"
+
+# Format dates and times
+# based on human-friendly examples
 gem "stamp"
-gem "kaminari"
-gem "haml", "3.1.4"
+
+# Enumeration fields
+gem 'enumerize'
+
+# Pagination
+gem "kaminari", "~> 0.14.1"
+
+# HAML
 gem "haml-rails"
-gem "jquery-rails"
-gem "grit", :git => "https://github.com/gitlabhq/grit.git"
-gem "gitolite", :git => "https://github.com/gitlabhq/gitolite-client.git"
+
+# Files attachments
 gem "carrierwave"
+
+# Authorization
 gem "six"
-gem "therubyracer"
-gem "faker"
+
+# Generate Fake data
+gem "ffaker"
+
+# Seed data
 gem "seed-fu"
-gem "linguist", "~> 1.0.0", :git => "https://github.com/gitlabhq/linguist.git"
-gem "pygments.rb", "0.2.11"
-gem "redcarpet", "~> 2.1.1"
-gem "thin"
+
+# Markdown to HTML
+gem "redcarpet",     "~> 2.2.2"
+gem "github-markup", "~> 0.7.4", require: 'github/markup'
+
+# Servers
 gem "unicorn"
-gem "git"
-gem "acts_as_list"
-gem "acts-as-taggable-on", "~> 2.1.0"
-gem "drapper"
-gem "resque", "~> 1.20.0"
+
+# State machine
+gem "state_machine"
+
+# Issue tags
+gem "acts-as-taggable-on", "2.3.3"
+
+# Decorators
+gem "draper"
+
+# Background jobs
+gem 'slim'
+gem 'sinatra', require: nil
+gem 'sidekiq'
+
+# HTTP requests
 gem "httparty"
-gem "charlock_holmes"
-gem "foreman"
-gem "omniauth-ldap"
-gem 'bootstrap-sass', "2.0.2"
+
+# Colored output to console
 gem "colored"
-gem 'yaml_db', :git => "https://github.com/gitlabhq/yaml_db.git"
-gem 'modularity'
+
+# GitLab settings
+gem 'settingslogic'
+
+# Misc
+gem "foreman"
+gem "git"
 
 group :assets do
-  gem "sass-rails",   "3.2.3"
-  gem "coffee-rails", "3.2.2"
-  gem "uglifier",     "1.0.3"
+  gem "sass-rails",   "~> 3.2.5"
+  gem "coffee-rails", "~> 3.2.2"
+  gem "uglifier",     "~> 1.3.0"
+  gem "therubyracer"
+
+  gem 'chosen-rails',     "0.9.8"
+  gem 'jquery-atwho-rails', "0.1.7"
+  gem "jquery-rails",     "2.1.3"
+  gem "jquery-ui-rails",  "2.0.2"
+  gem "modernizr",        "2.6.2"
+  gem "raphael-rails",    git: "https://github.com/gitlabhq/raphael-rails.git"
+  gem 'bootstrap-sass',   "2.2.1.1"
+  gem "font-awesome-sass-rails", "~> 3.0.0"
+  gem "gemoji", "~> 1.2.1", require: 'emoji/railtie'
+  gem "gon"
 end
 
 group :development do
+  gem "annotate", git: "https://github.com/ctran/annotate_models.git"
   gem "letter_opener"
-  gem "rails-footnotes"
-  gem "annotate", :git => "https://github.com/ctran/annotate_models.git"
+  gem 'quiet_assets', '~> 1.0.1'
+  gem 'rack-mini-profiler'
+  # Better errors handler
+  gem 'better_errors'
+  gem 'binding_of_caller'
+
+  gem 'rails_best_practices'
+
+  # Docs generator
+  gem "sdoc"
+
+  # thin instead webrick
+  gem 'thin'
 end
 
 group :development, :test do
-  gem "rspec-rails"
-  gem "capybara"
-  gem "autotest"
-  gem "autotest-rails"
+  gem 'rails-dev-tweaks'
+  gem 'spinach-rails', '0.2.0'
+  gem "rspec-rails", '2.12.2'
+  gem "capybara", '2.0.2'
   gem "pry"
   gem "awesome_print"
   gem "database_cleaner"
   gem "launchy"
-  gem "webmock"
+  gem 'factory_girl_rails'
+
+  # Guard
+  gem 'guard-rspec'
+  gem 'guard-spinach'
+
+  # Notification
+  gem 'rb-fsevent', require: darwin_only('rb-fsevent')
+  gem 'growl',      require: darwin_only('growl')
+  gem 'rb-inotify', require: linux_only('rb-inotify')
+
+  # PhantomJS driver for Capybara
+  gem 'poltergeist', '1.1.0'
 end
 
 group :test do
-  gem "turn", :require => false
-  gem "simplecov", :require => false
-  gem "shoulda", "3.0.1"
+  gem "simplecov", require: false
+  gem "shoulda-matchers", "1.3.0"
+  gem 'email_spec'
+  gem "webmock"
+  gem 'test_after_commit'
+end
+
+group :production do
+  gem "gitlab_meta", '5.0'
 end

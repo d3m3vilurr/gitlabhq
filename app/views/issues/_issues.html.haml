@@ -1,15 +1,12 @@
-- @issues.select(&:critical).each do |issue|
-  = render(:partial => 'issues/show', :locals => {:issue => issue})
-
-- @issues.reject(&:critical).each do |issue|
-  = render(:partial => 'issues/show', :locals => {:issue => issue})
+= render @issues
 
 - if @issues.present?
   %li.bottom
-    .row
-      .span7= paginate @issues, :remote => true, :theme => "gitlab"
-      .span3.right
-        %span.cgray.right #{@issues.total_count} issues for this filter
+    .left= paginate @issues, remote: true, theme: "gitlab"
+    .pull-right
+      %span.issue_counter #{@issues.total_count}
+      issues for this filter
 - else
   %li
-    %p.padded Nothing to show here
+    %h4.nothing_here_message Nothing to show here
+

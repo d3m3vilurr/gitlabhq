@@ -1,19 +1,42 @@
 namespace :gitlab do
-  namespace :app do
-    desc "GITLAB | Enable auto merge"
-    task :enable_automerge => :environment  do
-      Gitlabhq::GitHost.system.new.configure do |git|
-        git.admin_all_repo
+  namespace :satellites do
+    desc "GITLAB | Create satellite repos"
+    task create: :environment do
+      create_satellites
+    end
+  end
+
+  def create_satellites
+    warn_user_is_not_gitlab
+
+    print "Creating satellites for ..."
+    unless Project.count > 0
+      puts "skipping, because you have no projects".magenta
+      return
+    end
+    puts ""
+
+    Project.find_each(batch_size: 100) do |project|
+      print "#{project.name_with_namespace.yellow} ... "
+
+      unless project.repo_exists?
+        puts "skipping, because the repo is empty".magenta
+        next
       end
 
-      Project.find_each do |project|
-        if project.repo_exists? && !project.satellite.exists?
-          puts "Creating satellite for #{project.name}...".green
-          project.satellite.create
+      if project.satellite.exists?
+        puts "exists already".green
+      else
+        puts ""
+        project.satellite.create
+
+        print "... "
+        if $?.success?
+          puts "created".green
+        else
+          puts "error".red
         end
       end
-
-      puts "Done!".green
     end
   end
 end

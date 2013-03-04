@@ -1,4 +1,2 @@
 :plain
-  $(".merge-request-diffs").html("#{escape_javascript(render(:partial => "diffs"))}");
-
-
+  merge_request.$(".diffs").html("#{escape_javascript(render(partial: "merge_requests/show/diffs"))}");

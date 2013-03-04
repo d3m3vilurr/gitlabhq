@@ -1,47 +1,68 @@
-class TeamMembersController < ApplicationController
-  before_filter :project
-  layout "project"
-
+class TeamMembersController < ProjectResourceController
   # Authorize
-  before_filter :add_project_abilities
   before_filter :authorize_read_project!
-  before_filter :authorize_admin_project!, :except => [:show]
+  before_filter :authorize_admin_project!, except: [:index, :show]
+
+  def index
+    @team = @project.users_projects.scoped
+    @team = @team.send(params[:type]) if %w(masters developers reporters guests).include?(params[:type])
+    @team = @team.sort_by(&:project_access).reverse.group_by(&:project_access)
+
+    @assigned_teams = @project.user_team_project_relationships
+  end
 
   def show
-    @team_member = project.users_projects.find(params[:id])
+    @user_project_relation = project.users_projects.find_by_user_id(member)
+    @events = member.recent_events.in_projects(project).limit(7)
   end
 
   def new
-    @team_member = project.users_projects.new
+    @user_project_relation = project.users_projects.new
   end
 
   def create
-    @team_member = UsersProject.new(params[:team_member])
-    @team_member.project = project
-    if @team_member.save
-      redirect_to team_project_path(@project)
+    users = User.where(id: params[:user_ids])
+
+    @project.team << [users, params[:project_access]]
+
+    if params[:redirect_to]
+      redirect_to params[:redirect_to]
     else
-      render "new"
+      redirect_to project_team_index_path(@project)
     end
   end
 
   def update
-    @team_member = project.users_projects.find(params[:id])
-    @team_member.update_attributes(params[:team_member])
+    @user_project_relation = project.users_projects.find_by_user_id(member)
+    @user_project_relation.update_attributes(params[:team_member])
 
-    unless @team_member.valid?
+    unless @user_project_relation.valid?
       flash[:alert] = "User should have at least one role"
     end
-    redirect_to team_project_path(@project)
+    redirect_to project_team_index_path(@project)
   end
 
   def destroy
-    @team_member = project.users_projects.find(params[:id])
-    @team_member.destroy
+    @user_project_relation = project.users_projects.find_by_user_id(member)
+    @user_project_relation.destroy
 
     respond_to do |format|
-      format.html { redirect_to team_project_path(@project) }
-      format.js { render :nothing => true }
+      format.html { redirect_to project_team_index_path(@project) }
+      format.js { render nothing: true }
     end
+  end
+
+  def apply_import
+    giver = Project.find(params[:source_project_id])
+    status = @project.team.import(giver)
+    notice = status ? "Succesfully imported" : "Import failed"
+
+    redirect_to project_team_members_path(project), notice: notice
+  end
+
+  protected
+
+  def member
+    @member ||= User.find_by_username(params[:id])
   end
 end

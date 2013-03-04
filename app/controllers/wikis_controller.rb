@@ -1,34 +1,34 @@
-class WikisController < ApplicationController
-  before_filter :project
-  before_filter :add_project_abilities
+class WikisController < ProjectResourceController
   before_filter :authorize_read_wiki!
-  before_filter :authorize_write_wiki!, :only => [:edit, :create, :history]
-  before_filter :authorize_admin_wiki!, :only => :destroy
-  layout "project"
-  
+  before_filter :authorize_write_wiki!, only: [:edit, :create, :history]
+  before_filter :authorize_admin_wiki!, only: :destroy
+
+  def pages
+    @wiki_pages = @project.wikis.group(:slug).ordered
+  end
+
   def show
-    if params[:old_page_id]
-      @wiki = @project.wikis.find(params[:old_page_id])
+    @most_recent_wiki = @project.wikis.where(slug: params[:id]).ordered.first
+    if params[:version_id]
+      @wiki = @project.wikis.find(params[:version_id])
     else
-      @wiki = @project.wikis.where(:slug => params[:id]).order("created_at").last
+      @wiki = @most_recent_wiki
     end
 
-    unless @wiki
-      return render_404 unless can?(current_user, :write_wiki, @project)
-    end
-
-    respond_to do |format|
-      if @wiki
-        format.html
+    if @wiki
+      render 'show'
+    else
+      if can?(current_user, :write_wiki, @project)
+        @wiki = @project.wikis.new(slug: params[:id])
+        render 'edit'
       else
-        @wiki = @project.wikis.new(:slug => params[:id])
-        format.html { render "edit" }
+        render 'empty'
       end
     end
   end
 
   def edit
-    @wiki = @project.wikis.where(:slug => params[:id]).order("created_at").last
+    @wiki = @project.wikis.where(slug: params[:id]).ordered.first
     @wiki = Wiki.regenerate_from @wiki
   end
 
@@ -46,11 +46,11 @@ class WikisController < ApplicationController
   end
 
   def history
-    @wikis = @project.wikis.where(:slug => params[:id]).order("created_at")
+    @wiki_pages = @project.wikis.where(slug: params[:id]).ordered
   end
-  
+
   def destroy
-    @wikis = @project.wikis.where(:slug => params[:id]).delete_all
+    @wikis = @project.wikis.where(slug: params[:id]).delete_all
 
     respond_to do |format|
       format.html { redirect_to project_wiki_path(@project, :index), notice: "Page was successfully deleted" }
